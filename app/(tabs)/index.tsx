@@ -1,6 +1,9 @@
 import { IRREGULAR_VERBS, type IrregularVerb } from "@/data/irregular-verbs";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { useVerbProgress } from "@/hooks/use-verb-progress";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -11,31 +14,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const STORAGE_KEY_LEARNED = "irregular-verbs-learned";
-const STORAGE_KEY_HIDDEN = "irregular-verbs-hidden";
-
-function saveSet(key: string, set: Set<number>) {
-  AsyncStorage.setItem(key, JSON.stringify([...set]));
-}
-
-function usePersistedSet(key: string): [Set<number>, boolean, React.Dispatch<React.SetStateAction<Set<number>>>] {
-  const [set, setSet] = useState<Set<number>>(() => new Set());
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    AsyncStorage.getItem(key).then((raw) => {
-      if (raw) {
-        try {
-          setSet(new Set(JSON.parse(raw)));
-        } catch {}
-      }
-      setLoaded(true);
-    });
-  }, [key]);
-
-  return [set, loaded, setSet];
-}
 
 const COL = { num: 36, inf: 90, past: 100, pp: 110, tr: 130, cb: 40 };
 const TABLE_WIDTH = COL.num + COL.inf + COL.past + COL.pp + COL.tr + COL.cb * 2;
@@ -55,6 +33,38 @@ function Checkbox({
     >
       {checked && <Text style={styles.checkmark}>✓</Text>}
     </Pressable>
+  );
+}
+
+function UserAvatar({
+  uri,
+  initials,
+  size = 32,
+}: {
+  uri?: string;
+  initials: string;
+  size?: number;
+}) {
+  if (uri) {
+    return (
+      <Image
+        source={{ uri }}
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+      />
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.avatarFallback,
+        { width: size, height: size, borderRadius: size / 2 },
+      ]}
+    >
+      <Text style={[styles.avatarText, { fontSize: size * 0.38 }]}>
+        {initials}
+      </Text>
+    </View>
   );
 }
 
@@ -90,18 +100,20 @@ const VerbRow = React.memo(function VerbRow({
       style={[
         styles.row,
         {
-          backgroundColor: isHidden || isLearned
-            ? grayedBg
-            : index % 2 === 0
-              ? evenBg
-              : oddBg,
+          backgroundColor:
+            isHidden || isLearned ? grayedBg : index % 2 === 0 ? evenBg : oddBg,
         },
       ]}
     >
       <Text
         style={[
           styles.cell,
-          { width: COL.num, color: rowColor, textAlign: 'center', opacity: 0.5 },
+          {
+            width: COL.num,
+            color: rowColor,
+            textAlign: "center",
+            opacity: 0.5,
+          },
         ]}
       >
         {verb.id}
@@ -139,29 +151,36 @@ const VerbRow = React.memo(function VerbRow({
 });
 
 export default function HomeScreen() {
-  const [learned, learnedLoaded, setLearned] = usePersistedSet(STORAGE_KEY_LEARNED);
-  const [hidden, hiddenLoaded, setHidden] = usePersistedSet(STORAGE_KEY_HIDDEN);
+  const { learned, hidden, toggleLearned, toggleHidden } = useVerbProgress();
+  const { user, signOut } = useAuth();
+  const router = useRouter();
   const [showHidden, setShowHidden] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  const toggleLearned = useCallback((id: number) => {
-    setLearned((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      saveSet(STORAGE_KEY_LEARNED, next);
-      return next;
-    });
-  }, []);
+  const fullName =
+    user?.user_metadata?.full_name || user?.user_metadata?.name || "";
+  const avatarUrl =
+    user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
+  const displayName = fullName || user?.email || "";
+  const initials = fullName
+    ? fullName
+        .split(" ")
+        .filter(Boolean)
+        .map((p: string) => p[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : user?.email?.[0]?.toUpperCase() || "?";
 
-  const toggleHidden = useCallback((id: number) => {
-    setHidden((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      saveSet(STORAGE_KEY_HIDDEN, next);
-      return next;
-    });
-  }, []);
+  const handleToggleLearned = useCallback(
+    (id: number) => toggleLearned(id),
+    [toggleLearned],
+  );
+  const handleToggleHidden = useCallback(
+    (id: number) => toggleHidden(id),
+    [toggleHidden],
+  );
 
   const visibleVerbs = showHidden
     ? IRREGULAR_VERBS
@@ -173,24 +192,50 @@ export default function HomeScreen() {
   const borderColor = isDark ? "#2a2d30" : "#dde1e5";
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: bgColor }]}
+      edges={["top", "left", "right"]}
+    >
       <View style={[styles.toolbar, { borderBottomColor: borderColor }]}>
         <Text style={[styles.title, { color: textColor }]}>
           Irregular Verbs
         </Text>
-        {learned.size > 0 && (
-          <View style={styles.toggleRow}>
-            <Text style={[styles.toggleLabel, { color: textColor }]}>
-              Learned: {learned.size}
-            </Text>
-            <Switch
-              value={showHidden}
-              onValueChange={setShowHidden}
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-              thumbColor={showHidden ? "#0a7ea4" : "#f4f3f4"}
-            />
-          </View>
-        )}
+        <View style={styles.toolbarRight}>
+          {learned.size > 0 && (
+            <View style={styles.toggleRow}>
+              <Text style={[styles.toggleLabel, { color: textColor }]}>
+                Learned: {learned.size}
+              </Text>
+              <Switch
+                value={showHidden}
+                onValueChange={setShowHidden}
+                trackColor={{ false: "#767577", true: "#81b0ff" }}
+                thumbColor={showHidden ? "#0a7ea4" : "#f4f3f4"}
+              />
+            </View>
+          )}
+          {user ? (
+            <View style={styles.userSection}>
+              <UserAvatar uri={avatarUrl} initials={initials} size={28} />
+              <Text
+                style={[styles.userName, { color: textColor }]}
+                numberOfLines={1}
+              >
+                {displayName}
+              </Text>
+              <Pressable onPress={signOut} style={styles.signOutButton}>
+                <Text style={styles.signOutText}>Sign Out</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => router.push("/(auth)/login")}
+              style={styles.signInButton}
+            >
+              <Text style={styles.signInText}>Save Progress</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
       <View style={[styles.statsRow, { borderBottomColor: borderColor }]}>
         <Text style={[styles.statsText, { color: isDark ? "#888" : "#666" }]}>
@@ -211,7 +256,12 @@ export default function HomeScreen() {
               { backgroundColor: headerBg, borderBottomColor: borderColor },
             ]}
           >
-            <Text style={[styles.headerCell, { width: COL.num, textAlign: 'center' }]}>
+            <Text
+              style={[
+                styles.headerCell,
+                { width: COL.num, textAlign: "center" },
+              ]}
+            >
               #
             </Text>
             <Text style={[styles.headerCell, { width: COL.inf }]}>
@@ -247,8 +297,8 @@ export default function HomeScreen() {
                 index={index}
                 isLearned={learned.has(verb.id)}
                 isHidden={hidden.has(verb.id)}
-                onToggleLearned={() => toggleLearned(verb.id)}
-                onToggleHidden={() => toggleHidden(verb.id)}
+                onToggleLearned={() => handleToggleLearned(verb.id)}
+                onToggleHidden={() => handleToggleHidden(verb.id)}
                 isDark={isDark}
               />
             ))}
@@ -272,6 +322,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
+  toolbarRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
   title: {
     fontSize: 22,
     fontWeight: "700",
@@ -283,6 +338,47 @@ const styles = StyleSheet.create({
   },
   toggleLabel: {
     fontSize: 13,
+  },
+  userSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  userName: {
+    fontSize: 13,
+    fontWeight: "500",
+    maxWidth: 120,
+  },
+  avatarFallback: {
+    backgroundColor: "#9e9e9e",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+  signOutButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: "#e5393520",
+  },
+  signOutText: {
+    color: "#e53935",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  signInButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: "#0a7ea420",
+  },
+  signInText: {
+    color: "#0a7ea4",
+    fontSize: 13,
+    fontWeight: "600",
   },
   statsRow: {
     paddingHorizontal: 16,
