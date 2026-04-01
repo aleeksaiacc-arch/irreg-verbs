@@ -1,7 +1,19 @@
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
+
+type PendingOp = {
+  verbId: number;
+  isLearned: boolean;
+  isHidden: boolean;
+};
 
 const CACHE_KEY_LEARNED = (uid: string) => `verb-progress-learned-${uid}`;
 const CACHE_KEY_HIDDEN = (uid: string) => `verb-progress-hidden-${uid}`;
@@ -59,6 +71,31 @@ async function upsertProgress(
   if (error) throw error;
 }
 
+async function flushPendingOps(
+  userId: string,
+  pendingOps: MutableRefObject<PendingOp[]>,
+  syncingRef: MutableRefObject<boolean>
+) {
+  if (syncingRef.current) return;
+  syncingRef.current = true;
+
+  while (pendingOps.current.length > 0) {
+    const op = pendingOps.current[0];
+    try {
+      await upsertProgress(userId, op.verbId, op.isLearned, op.isHidden);
+      pendingOps.current.shift();
+    } catch {
+      break;
+    }
+  }
+
+  syncingRef.current = false;
+
+  if (pendingOps.current.length > 0) {
+    void flushPendingOps(userId, pendingOps, syncingRef);
+  }
+}
+
 export function useVerbProgress() {
   const { user } = useAuth();
   const userId = user?.id;
@@ -66,13 +103,7 @@ export function useVerbProgress() {
   const [learned, setLearned] = useState<Set<number>>(new Set());
   const [hidden, setHidden] = useState<Set<number>>(new Set());
   const [loaded, setLoaded] = useState(false);
-  const pendingOps = useRef<
-    Array<{
-      verbId: number;
-      isLearned: boolean;
-      isHidden: boolean;
-    }>
-  >([]);
+  const pendingOps = useRef<PendingOp[]>([]);
   const syncingRef = useRef(false);
 
   const learnedKey = userId ? CACHE_KEY_LEARNED(userId) : GUEST_KEY_LEARNED;
@@ -82,16 +113,41 @@ export function useVerbProgress() {
     let cancelled = false;
 
     async function init() {
-      const [cachedLearned, cachedHidden] = await Promise.all([
-        loadCached(learnedKey),
-        loadCached(hiddenKey),
-      ]);
+      if (!userId) {
+        const [cachedLearned, cachedHidden] = await Promise.all([
+          loadCached(learnedKey),
+          loadCached(hiddenKey),
+        ]);
+        if (cancelled) return;
+        setLearned(cachedLearned);
+        setHidden(cachedHidden);
+        setLoaded(true);
+        return;
+      }
+
+      const userLKey = CACHE_KEY_LEARNED(userId);
+      const userHKey = CACHE_KEY_HIDDEN(userId);
+
+      const [guestLearned, guestHidden, userLearned, userHidden] =
+        await Promise.all([
+          loadCached(GUEST_KEY_LEARNED),
+          loadCached(GUEST_KEY_HIDDEN),
+          loadCached(userLKey),
+          loadCached(userHKey),
+        ]);
       if (cancelled) return;
-      setLearned(cachedLearned);
-      setHidden(cachedHidden);
+
+      const guestLearnedSnapshot = new Set(guestLearned);
+
+      const mergedLocalLearned = new Set([...userLearned, ...guestLearned]);
+      const mergedLocalHidden = new Set([...userHidden, ...guestHidden]);
+
+      setLearned(mergedLocalLearned);
+      setHidden(mergedLocalHidden);
       setLoaded(true);
 
-      if (!userId) return;
+      let mergedLearned = mergedLocalLearned;
+      let mergedHidden = mergedLocalHidden;
 
       try {
         const remote = await fetchRemoteProgress(userId);
@@ -104,18 +160,35 @@ export function useVerbProgress() {
           if (row.is_hidden) remoteHidden.add(row.verb_id);
         }
 
-        const mergedLearned = new Set([...cachedLearned, ...remoteLearned]);
-        const mergedHidden = new Set([...cachedHidden, ...remoteHidden]);
-
-        setLearned(mergedLearned);
-        setHidden(mergedHidden);
-        await Promise.all([
-          saveCache(learnedKey, mergedLearned),
-          saveCache(hiddenKey, mergedHidden),
-        ]);
+        mergedLearned = new Set([...mergedLocalLearned, ...remoteLearned]);
+        mergedHidden = new Set([...mergedLocalHidden, ...remoteHidden]);
       } catch {
-        // offline — use cached data
+        // offline — mergedLocal* only
       }
+
+      if (cancelled) return;
+
+      setLearned(mergedLearned);
+      setHidden(mergedHidden);
+      await Promise.all([
+        saveCache(userLKey, mergedLearned),
+        saveCache(userHKey, mergedHidden),
+      ]);
+
+      for (const verbId of guestLearnedSnapshot) {
+        pendingOps.current.push({
+          verbId,
+          isLearned: mergedLearned.has(verbId),
+          isHidden: mergedHidden.has(verbId),
+        });
+      }
+
+      await Promise.all([
+        AsyncStorage.removeItem(GUEST_KEY_LEARNED),
+        AsyncStorage.removeItem(GUEST_KEY_HIDDEN),
+      ]);
+
+      await flushPendingOps(userId, pendingOps, syncingRef);
     }
 
     init();
@@ -125,24 +198,8 @@ export function useVerbProgress() {
   }, [userId, learnedKey, hiddenKey]);
 
   const flushPending = useCallback(async () => {
-    if (!userId || syncingRef.current) return;
-    syncingRef.current = true;
-
-    while (pendingOps.current.length > 0) {
-      const op = pendingOps.current[0];
-      try {
-        await upsertProgress(userId, op.verbId, op.isLearned, op.isHidden);
-        pendingOps.current.shift();
-      } catch {
-        break;
-      }
-    }
-
-    syncingRef.current = false;
-
-    if (pendingOps.current.length > 0) {
-      flushPending();
-    }
+    if (!userId) return;
+    await flushPendingOps(userId, pendingOps, syncingRef);
   }, [userId]);
 
   const toggleLearned = useCallback(
