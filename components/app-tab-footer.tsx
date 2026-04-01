@@ -63,7 +63,7 @@ export function AppTabFooter() {
           Home
         </Text>
       </Pressable>
-      <Pressable
+      {/* <Pressable
         accessibilityRole="button"
         accessibilityState={{ selected: donateActive }}
         onPressIn={onPressIn}
@@ -87,7 +87,7 @@ export function AppTabFooter() {
         >
           Donate
         </Text>
-      </Pressable>
+      </Pressable> */}
     </View>
   );
 }

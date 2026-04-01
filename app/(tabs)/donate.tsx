@@ -1,6 +1,13 @@
+import { DonationBankCard } from "@/components/donate/donation-bank-card";
+import { DonationCryptoCard } from "@/components/donate/donation-crypto-card";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import {
+  donationBelarus,
+  donationKaspi,
+  getDonationCrypto,
+} from "@/constants/donation-config";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useThemeColor } from "@/hooks/use-theme-color";
@@ -17,6 +24,9 @@ export default function DonateScreen() {
   );
   const cardBg = isDark ? "#1c2124" : "#f4f8fb";
   const accentGlow = isDark ? "rgba(10, 126, 164, 0.22)" : "rgba(10, 126, 164, 0.12)";
+  const cardBorder = isDark ? "#2e3539" : "#d8e4ea";
+
+  const crypto = getDonationCrypto();
 
   return (
     <ThemedView style={styles.flex}>
@@ -63,17 +73,67 @@ export default function DonateScreen() {
 
           <View style={styles.section}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
-              Donate
+              How to donate
             </ThemedText>
-            <View
-              style={[
-                styles.formPlaceholder,
-                {
-                  backgroundColor: cardBg,
-                  borderColor: isDark ? "#2e3539" : "#d8e4ea",
-                },
-              ]}
-            />
+            <ThemedText style={[styles.subsectionLead, { color: textMuted }]}>
+              Pick a method, copy the details, or scan a crypto QR in your wallet.
+            </ThemedText>
+
+            <ThemedText type="defaultSemiBold" style={styles.subsectionTitle}>
+              Cryptocurrency
+            </ThemedText>
+            {crypto.map((item) => (
+              <DonationCryptoCard
+                key={item.id}
+                item={item}
+                isDark={isDark}
+                tint={tint}
+                mutedColor={textMuted}
+                cardBg={cardBg}
+                borderColor={cardBorder}
+              />
+            ))}
+
+            <ThemedText type="defaultSemiBold" style={styles.subsectionTitle}>
+              Belarus
+            </ThemedText>
+            {donationBelarus.length > 0 ? (
+              donationBelarus.map((bank) => (
+                <DonationBankCard
+                  key={bank.bankName}
+                  bank={bank}
+                  isDark={isDark}
+                  tint={tint}
+                  mutedColor={textMuted}
+                  cardBg={cardBg}
+                  borderColor={cardBorder}
+                />
+              ))
+            ) : (
+              <ThemedText style={[styles.emptyHint, { color: textMuted }]}>
+                Add EXPO_PUBLIC_DONATION_PRIOR_* , BNB_* , or ALFA_* variables to show bank
+                details here.
+              </ThemedText>
+            )}
+
+            <ThemedText type="defaultSemiBold" style={styles.subsectionTitle}>
+              Kazakhstan (Kaspi)
+            </ThemedText>
+            {donationKaspi ? (
+              <DonationBankCard
+                bank={donationKaspi}
+                isDark={isDark}
+                tint={tint}
+                mutedColor={textMuted}
+                cardBg={cardBg}
+                borderColor={cardBorder}
+              />
+            ) : (
+              <ThemedText style={[styles.emptyHint, { color: textMuted }]}>
+                Set EXPO_PUBLIC_DONATION_KASPI_PHONE or EXPO_PUBLIC_DONATION_KASPI_CARD to show
+                Kaspi transfer details.
+              </ThemedText>
+            )}
           </View>
 
           <View style={{ height: 32 }} />
@@ -132,15 +192,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
+  subsectionLead: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 18,
+  },
+  subsectionTitle: {
+    fontSize: 16,
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  emptyHint: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+    fontStyle: "italic",
+  },
   paragraph: {
     fontSize: 16,
     lineHeight: 24,
     marginBottom: 14,
-  },
-  formPlaceholder: {
-    minHeight: 180,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderStyle: "dashed",
   },
 });
