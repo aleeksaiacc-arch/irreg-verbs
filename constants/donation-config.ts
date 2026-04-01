@@ -2,12 +2,6 @@ function env(key: string): string {
   return (process.env[key]?.trim() ?? "");
 }
 
-function line(label: string, key: string): DonationLine | null {
-  const value = env(key);
-  if (!value) return null;
-  return { label, value };
-}
-
 export type DonationLine = { label: string; value: string };
 
 export type DonationCrypto = {
@@ -37,30 +31,24 @@ export function getDonationCrypto(): DonationCrypto[] {
   ];
 }
 
-export type DonationBank = { bankName: string; lines: DonationLine[] };
+export type KaspiDonationDetails = {
+  cardNumber: string;
+  cardHolder: string;
+  phone: string;
+  expiry: string;
+};
 
-function bank(name: string, entries: (DonationLine | null)[]): DonationBank | null {
-  const lines = entries.filter((x): x is DonationLine => x !== null);
-  if (lines.length === 0) return null;
-  return { bankName: name, lines };
+export function getKaspiDonation(): KaspiDonationDetails | null {
+  const cardNumber = env("EXPO_PUBLIC_DONATION_KASPI_CARD");
+  const cardHolder = env("EXPO_PUBLIC_DONATION_KASPI_HOLDER");
+  const phone = env("EXPO_PUBLIC_DONATION_KASPI_PHONE");
+  const expiry = env("EXPO_PUBLIC_DONATION_KASPI_EXPIRY");
+  if (!cardNumber && !cardHolder && !phone && !expiry) return null;
+  return { cardNumber, cardHolder, phone, expiry };
 }
 
-export const donationBelarus: DonationBank[] = [
-  bank("Priorbank", [
-    line("IBAN", "EXPO_PUBLIC_DONATION_PRIOR_IBAN"),
-    line("Account / card", "EXPO_PUBLIC_DONATION_PRIOR_ACCOUNT"),
-  ]),
-  bank("BNB Bank", [
-    line("IBAN", "EXPO_PUBLIC_DONATION_BNB_IBAN"),
-    line("Account / card", "EXPO_PUBLIC_DONATION_BNB_ACCOUNT"),
-  ]),
-  bank("Alfa-Bank", [
-    line("IBAN", "EXPO_PUBLIC_DONATION_ALFA_IBAN"),
-    line("Account / card", "EXPO_PUBLIC_DONATION_ALFA_ACCOUNT"),
-  ]),
-].filter((b): b is DonationBank => b !== null);
-
-export const donationKaspi: DonationBank | null = bank("Kaspi Bank (Kazakhstan)", [
-  line("Phone / Kaspi Gold", "EXPO_PUBLIC_DONATION_KASPI_PHONE"),
-  line("Card number", "EXPO_PUBLIC_DONATION_KASPI_CARD"),
-]);
+export function formatCardNumberGroups(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.replace(/(.{4})/g, "$1 ").trim();
+}

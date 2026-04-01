@@ -1,13 +1,9 @@
-import { DonationBankCard } from "@/components/donate/donation-bank-card";
 import { DonationCryptoCard } from "@/components/donate/donation-crypto-card";
+import { DonationKaspiCard } from "@/components/donate/donation-kaspi-card";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import {
-  donationBelarus,
-  donationKaspi,
-  getDonationCrypto,
-} from "@/constants/donation-config";
+import { getDonationCrypto, getKaspiDonation } from "@/constants/donation-config";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useThemeColor } from "@/hooks/use-theme-color";
@@ -27,15 +23,18 @@ export default function DonateScreen() {
   const cardBorder = isDark ? "#2e3539" : "#d8e4ea";
 
   const crypto = getDonationCrypto();
+  const kaspi = getKaspiDonation();
 
   return (
     <ThemedView style={styles.flex}>
       <SafeAreaView style={styles.flex} edges={["top"]}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.clampOuter}>
+          <View style={styles.clampInner}>
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
           <View style={[styles.heroWrap, { backgroundColor: accentGlow }]}>
             <View
               style={[
@@ -95,57 +94,49 @@ export default function DonateScreen() {
             ))}
 
             <ThemedText type="defaultSemiBold" style={styles.subsectionTitle}>
-              Belarus
+              Kazakhstan (Kaspi Gold)
             </ThemedText>
-            {donationBelarus.length > 0 ? (
-              donationBelarus.map((bank) => (
-                <DonationBankCard
-                  key={bank.bankName}
-                  bank={bank}
-                  isDark={isDark}
-                  tint={tint}
-                  mutedColor={textMuted}
-                  cardBg={cardBg}
-                  borderColor={cardBorder}
-                />
-              ))
-            ) : (
-              <ThemedText style={[styles.emptyHint, { color: textMuted }]}>
-                Add EXPO_PUBLIC_DONATION_PRIOR_* , BNB_* , or ALFA_* variables to show bank
-                details here.
-              </ThemedText>
-            )}
-
-            <ThemedText type="defaultSemiBold" style={styles.subsectionTitle}>
-              Kazakhstan (Kaspi)
-            </ThemedText>
-            {donationKaspi ? (
-              <DonationBankCard
-                bank={donationKaspi}
+            {kaspi ? (
+              <DonationKaspiCard
+                kaspi={kaspi}
                 isDark={isDark}
                 tint={tint}
                 mutedColor={textMuted}
-                cardBg={cardBg}
-                borderColor={cardBorder}
+                detailsCardBg={cardBg}
+                detailsBorderColor={cardBorder}
               />
             ) : (
               <ThemedText style={[styles.emptyHint, { color: textMuted }]}>
-                Set EXPO_PUBLIC_DONATION_KASPI_PHONE or EXPO_PUBLIC_DONATION_KASPI_CARD to show
-                Kaspi transfer details.
+                Add at least one of: EXPO_PUBLIC_DONATION_KASPI_CARD, EXPO_PUBLIC_DONATION_KASPI_HOLDER,
+                EXPO_PUBLIC_DONATION_KASPI_PHONE, EXPO_PUBLIC_DONATION_KASPI_EXPIRY.
               </ThemedText>
             )}
           </View>
 
           <View style={{ height: 32 }} />
-        </ScrollView>
+            </ScrollView>
+          </View>
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
 }
 
+const PAGE_MAX_WIDTH = 1024;
+
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+  },
+  clampOuter: {
+    flex: 1,
+    width: "100%",
+    alignItems: "center",
+  },
+  clampInner: {
+    flex: 1,
+    width: "100%",
+    maxWidth: PAGE_MAX_WIDTH,
   },
   scroll: {
     flex: 1,
