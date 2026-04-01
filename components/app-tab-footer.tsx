@@ -18,7 +18,7 @@ export function AppTabFooter() {
 
   const homeActive =
     pathname === "/" || pathname === "" || pathname === "/index";
-  const exploreActive = pathname.startsWith("/explore");
+  const donateActive = pathname.startsWith("/donate");
 
   const borderTop = scheme === "dark" ? "#2a2d30" : "#e8e8e8";
   const barBg = scheme === "dark" ? "#151718" : "#ffffff";
@@ -65,27 +65,27 @@ export function AppTabFooter() {
       </Pressable>
       <Pressable
         accessibilityRole="button"
-        accessibilityState={{ selected: exploreActive }}
+        accessibilityState={{ selected: donateActive }}
         onPressIn={onPressIn}
-        onPress={() => router.push("/explore")}
+        onPress={() => router.push("/donate")}
         style={styles.tab}
       >
         <IconSymbol
           size={28}
-          name="paperplane.fill"
-          color={exploreActive ? theme.tabIconSelected : theme.tabIconDefault}
+          name="heart.fill"
+          color={donateActive ? theme.tabIconSelected : theme.tabIconDefault}
         />
         <Text
           style={[
             styles.label,
             {
-              color: exploreActive
+              color: donateActive
                 ? theme.tabIconSelected
                 : theme.tabIconDefault,
             },
           ]}
         >
-          Explore
+          Donate
         </Text>
       </Pressable>
     </View>
