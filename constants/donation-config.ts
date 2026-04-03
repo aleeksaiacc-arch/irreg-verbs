@@ -18,14 +18,14 @@ export function getDonationCrypto(): DonationCrypto[] {
       id: "btc",
       label: "Bitcoin",
       network: "Bitcoin",
-      address: env("EXPO_PUBLIC_DONATION_BTC_ADDRESS"),
+      address: process.env.EXPO_PUBLIC_DONATION_BTC_ADDRESS || "",
       warning: "Send only BTC on the Bitcoin network.",
     },
     {
       id: "eth",
       label: "Ethereum",
-      network: env("EXPO_PUBLIC_DONATION_ETH_NETWORK") || "Ethereum (ERC-20)",
-      address: env("EXPO_PUBLIC_DONATION_ETH_ADDRESS"),
+      network: process.env.EXPO_PUBLIC_DONATION_ETH_NETWORK || "Ethereum (ERC-20)",
+      address: process.env.EXPO_PUBLIC_DONATION_ETH_ADDRESS || "",
       warning: "Send only ETH on the network shown above.",
     },
   ];
@@ -39,10 +39,10 @@ export type KaspiDonationDetails = {
 };
 
 export function getKaspiDonation(): KaspiDonationDetails | null {
-  const cardNumber = env("EXPO_PUBLIC_DONATION_KASPI_CARD");
-  const cardHolder = env("EXPO_PUBLIC_DONATION_KASPI_HOLDER");
-  const phone = env("EXPO_PUBLIC_DONATION_KASPI_PHONE");
-  const expiry = env("EXPO_PUBLIC_DONATION_KASPI_EXPIRY");
+  const cardNumber = process.env.EXPO_PUBLIC_DONATION_KASPI_CARD || "";
+  const cardHolder = process.env.EXPO_PUBLIC_DONATION_KASPI_HOLDER || "";
+  const phone = process.env.EXPO_PUBLIC_DONATION_KASPI_PHONE || "";
+  const expiry = process.env.EXPO_PUBLIC_DONATION_KASPI_EXPIRY || "";
   if (!cardNumber && !cardHolder && !phone && !expiry) return null;
   return { cardNumber, cardHolder, phone, expiry };
 }
