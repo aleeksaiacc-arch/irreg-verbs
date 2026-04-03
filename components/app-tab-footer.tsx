@@ -23,11 +23,12 @@ export function AppTabFooter() {
 
   const borderTop = scheme === "dark" ? "#2a2d30" : "#e8e8e8";
   const barBg = scheme === "dark" ? "#151718" : "#ffffff";
-  const tabHoverBg = scheme === "dark" ? "rgba(255, 255, 255, 0.10)" : "#f0f0f0";
+  const tabHoverBg =
+    scheme === "dark" ? "rgba(255, 255, 255, 0.10)" : "#f0f0f0";
 
-  const [hoveredTab, setHoveredTab] = useState<"home" | "donate" | "message" | null>(
-    null,
-  );
+  const [hoveredTab, setHoveredTab] = useState<
+    "home" | "donate" | "message" | null
+  >(null);
 
   const onPressIn = () => {
     if (process.env.EXPO_OS === "ios") {
@@ -50,6 +51,30 @@ export function AppTabFooter() {
         },
       ]}
     >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Message the developers"
+        onHoverIn={() => setHoveredTab("message")}
+        onHoverOut={() => setHoveredTab(null)}
+        onPressIn={onPressIn}
+        onPress={openDeveloperMail}
+        style={[
+          styles.tab,
+          hoveredTab === "message" && { backgroundColor: tabHoverBg },
+        ]}
+      >
+        <IconSymbol
+          size={28}
+          name="envelope.fill"
+          color={theme.tabIconDefault}
+        />
+        <Text
+          style={[styles.label, { color: theme.tabIconDefault }]}
+          numberOfLines={2}
+        >
+          Message the developers
+        </Text>
+      </Pressable>{" "}
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ selected: homeActive }}
@@ -106,30 +131,6 @@ export function AppTabFooter() {
           ]}
         >
           Donate
-        </Text>
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Message the developers"
-        onHoverIn={() => setHoveredTab("message")}
-        onHoverOut={() => setHoveredTab(null)}
-        onPressIn={onPressIn}
-        onPress={openDeveloperMail}
-        style={[
-          styles.tab,
-          hoveredTab === "message" && { backgroundColor: tabHoverBg },
-        ]}
-      >
-        <IconSymbol
-          size={28}
-          name="envelope.fill"
-          color={theme.tabIconDefault}
-        />
-        <Text
-          style={[styles.label, { color: theme.tabIconDefault }]}
-          numberOfLines={2}
-        >
-          Message the developers
         </Text>
       </Pressable>
     </View>
