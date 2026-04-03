@@ -1,5 +1,5 @@
 import { ScrollViewStyleReset } from "expo-router/html";
-import { type PropsWithChildren } from "react";
+import { createElement, type PropsWithChildren } from "react";
 
 export default function Root({ children }: PropsWithChildren) {
   return (
@@ -13,6 +13,20 @@ export default function Root({ children }: PropsWithChildren) {
         />
         <title>Irregular verbs</title>
         <ScrollViewStyleReset />
+        {createElement("script", {
+          async: true,
+          src: "https://www.googletagmanager.com/gtag/js?id=G-B9MN97HSDS",
+        })}
+        {createElement("script", {
+          dangerouslySetInnerHTML: {
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-B9MN97HSDS');
+            `,
+          },
+        })}
       </head>
       <body>{children}</body>
     </html>
