@@ -16,9 +16,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const COL = { num: 36, inf: 90, past: 100, pp: 110, tr: 130, cb: 40 };
-const TABLE_WIDTH = COL.num + COL.inf + COL.past + COL.pp + COL.tr + COL.cb * 2;
+const COL = { num: 36, inf: 90, past: 100, pp: 110, tr: 144, cb: 40 };
+const TABLE_WIDTH =
+  COL.num + COL.inf + COL.past + COL.pp + COL.tr + COL.cb * 2 + 10;
 const COMPACT_BREAKPOINT = 560;
+const LARGE_LAYOUT_BREAKPOINT = 650;
 
 function Checkbox({
   checked,
@@ -64,8 +66,12 @@ function CompactFormLine({
           { backgroundColor: isDark ? `${accent}30` : `${accent}1a` },
         ]}
       >
-        <View style={[styles.compactFormLabelBar, { backgroundColor: accent }]} />
-        <Text style={[styles.compactFormLabelText, { color: accent }]}>{label}</Text>
+        <View
+          style={[styles.compactFormLabelBar, { backgroundColor: accent }]}
+        />
+        <Text style={[styles.compactFormLabelText, { color: accent }]}>
+          {label}
+        </Text>
       </View>
       <View
         style={[
@@ -222,10 +228,7 @@ const VerbRow = React.memo(function VerbRow({
         ]}
       >
         <Text
-          style={[
-            styles.compactId,
-            { color: isDark ? "#6b7280" : "#8a9299" },
-          ]}
+          style={[styles.compactId, { color: isDark ? "#6b7280" : "#8a9299" }]}
         >
           #{verb.id}
         </Text>
@@ -335,9 +338,109 @@ const VerbRow = React.memo(function VerbRow({
   );
 });
 
+function WideVerbTable({
+  headerBg,
+  borderColor,
+  headerMuted,
+  visibleVerbs,
+  learned,
+  hidden,
+  onToggleLearned,
+  onToggleHidden,
+  isDark,
+  rowBorderColor,
+}: {
+  headerBg: string;
+  borderColor: string;
+  headerMuted: string;
+  visibleVerbs: IrregularVerb[];
+  learned: Set<number>;
+  hidden: Set<number>;
+  onToggleLearned: (id: number) => void;
+  onToggleHidden: (id: number) => void;
+  isDark: boolean;
+  rowBorderColor: string;
+}) {
+  return (
+    <View style={styles.tableAreaFill}>
+      <View
+        style={[
+          styles.headerRow,
+          { backgroundColor: headerBg, borderBottomColor: borderColor },
+        ]}
+      >
+        <Text
+          style={[
+            styles.headerCell,
+            { width: COL.num, textAlign: "center", color: headerMuted },
+          ]}
+        >
+          #
+        </Text>
+        <Text
+          style={[styles.headerCell, { width: COL.inf, color: headerMuted }]}
+        >
+          Infinitive
+        </Text>
+        <Text
+          style={[styles.headerCell, { width: COL.past, color: headerMuted }]}
+        >
+          Past
+        </Text>
+        <Text
+          style={[styles.headerCell, { width: COL.pp, color: headerMuted }]}
+        >
+          Past Part.
+        </Text>
+        <Text
+          style={[styles.headerCell, { width: COL.tr, color: headerMuted }]}
+        >
+          Перевод
+        </Text>
+        <Text
+          style={[
+            styles.headerCell,
+            { width: COL.cb, textAlign: "center", color: headerMuted },
+          ]}
+        >
+          ✓
+        </Text>
+        <Text
+          style={[
+            styles.headerCell,
+            { width: COL.cb, textAlign: "center", color: headerMuted },
+          ]}
+        >
+          👁
+        </Text>
+      </View>
+      <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
+        {visibleVerbs.map((verb, index) => (
+          <VerbRow
+            key={verb.id}
+            verb={verb}
+            index={index}
+            isLearned={learned.has(verb.id)}
+            isHidden={hidden.has(verb.id)}
+            onToggleLearned={() => onToggleLearned(verb.id)}
+            onToggleHidden={() => onToggleHidden(verb.id)}
+            isDark={isDark}
+            compact={false}
+            rowBorderColor={rowBorderColor}
+          />
+        ))}
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const compact = width < COMPACT_BREAKPOINT;
+  const centerTable =
+    !compact && width >= LARGE_LAYOUT_BREAKPOINT && width >= TABLE_WIDTH;
+  const needsHorizontalTableScroll = !compact && width < TABLE_WIDTH;
   const { learned, hidden, toggleLearned, toggleHidden } = useVerbProgress();
   const { user, signOut } = useAuth();
   const router = useRouter();
@@ -489,83 +592,53 @@ export default function HomeScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1 }}
-        >
-          <View style={{ flex: 1 }}>
-            <View
-              style={[
-                styles.headerRow,
-                { backgroundColor: headerBg, borderBottomColor: borderColor },
-              ]}
+        <View style={styles.tableArea}>
+          {needsHorizontalTableScroll ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.tableAreaFill}
+              contentContainerStyle={styles.tableHScrollContent}
             >
-              <Text
-                style={[
-                  styles.headerCell,
-                  { width: COL.num, textAlign: "center", color: headerMuted },
-                ]}
-              >
-                #
-              </Text>
-              <Text
-                style={[styles.headerCell, { width: COL.inf, color: headerMuted }]}
-              >
-                Infinitive
-              </Text>
-              <Text
-                style={[styles.headerCell, { width: COL.past, color: headerMuted }]}
-              >
-                Past
-              </Text>
-              <Text
-                style={[styles.headerCell, { width: COL.pp, color: headerMuted }]}
-              >
-                Past Part.
-              </Text>
-              <Text
-                style={[styles.headerCell, { width: COL.tr, color: headerMuted }]}
-              >
-                Перевод
-              </Text>
-              <Text
-                style={[
-                  styles.headerCell,
-                  { width: COL.cb, textAlign: "center", color: headerMuted },
-                ]}
-              >
-                ✓
-              </Text>
-              <Text
-                style={[
-                  styles.headerCell,
-                  { width: COL.cb, textAlign: "center", color: headerMuted },
-                ]}
-              >
-                👁
-              </Text>
-            </View>
-            <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
-              {visibleVerbs.map((verb, index) => (
-                <VerbRow
-                  key={verb.id}
-                  verb={verb}
-                  index={index}
-                  isLearned={learned.has(verb.id)}
-                  isHidden={hidden.has(verb.id)}
-                  onToggleLearned={() => handleToggleLearned(verb.id)}
-                  onToggleHidden={() => handleToggleHidden(verb.id)}
+              <View style={styles.tableAreaFill}>
+                <WideVerbTable
+                  headerBg={headerBg}
+                  borderColor={borderColor}
+                  headerMuted={headerMuted}
+                  visibleVerbs={visibleVerbs}
+                  learned={learned}
+                  hidden={hidden}
+                  onToggleLearned={handleToggleLearned}
+                  onToggleHidden={handleToggleHidden}
                   isDark={isDark}
-                  compact={false}
                   rowBorderColor={rowBorderColor}
                 />
-              ))}
-              <View style={{ height: 40 }} />
+              </View>
             </ScrollView>
-          </View>
-        </ScrollView>
+          ) : (
+            <View
+              style={[
+                styles.tableCenterOuter,
+                centerTable && styles.tableCenterOuterAlign,
+              ]}
+            >
+              <View style={styles.tableFixedWidth}>
+                <WideVerbTable
+                  headerBg={headerBg}
+                  borderColor={borderColor}
+                  headerMuted={headerMuted}
+                  visibleVerbs={visibleVerbs}
+                  learned={learned}
+                  hidden={hidden}
+                  onToggleLearned={handleToggleLearned}
+                  onToggleHidden={handleToggleHidden}
+                  isDark={isDark}
+                  rowBorderColor={rowBorderColor}
+                />
+              </View>
+            </View>
+          )}
+        </View>
       )}
     </SafeAreaView>
   );
@@ -573,6 +646,25 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  tableArea: {
+    flex: 1,
+  },
+  tableAreaFill: {
+    flex: 1,
+  },
+  tableHScrollContent: {
+    flexGrow: 1,
+  },
+  tableCenterOuter: {
+    flex: 1,
+  },
+  tableCenterOuterAlign: {
+    alignItems: "center",
+  },
+  tableFixedWidth: {
+    width: TABLE_WIDTH,
     flex: 1,
   },
   toolbar: {
