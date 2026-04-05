@@ -58,7 +58,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS === "web" && typeof document !== "undefined") {
-      document.title = "Irregular verbs";
+      document.title = pathname === "/donate" ? "Donate" : "Irregular verbs";
     }
   }, [pathname]);
 
